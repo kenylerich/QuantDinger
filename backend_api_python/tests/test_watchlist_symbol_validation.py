@@ -89,7 +89,7 @@ def test_add_watchlist_persists_only_after_exact_symbol_match(monkeypatch):
     assert conn.committed is True
     assert conn.cursor_obj.executed
     _, params = conn.cursor_obj.executed[0]
-    assert params == (1, "USStock", "AAPL", "Apple Inc.", "", "spot", "", "")
+    assert params == (1, "USStock", "AAPL", "Apple Inc.", "", "spot", "", "", None)  # + group_id
 
 
 def test_crypto_hot_symbols_include_default_source_identity(monkeypatch):
@@ -174,6 +174,7 @@ def test_crypto_add_persists_exact_exchange_binding(monkeypatch):
         "swap",
         "BTC-USDT-SWAP",
         "USDT",
+        None,  # group_id
     )
 
 
@@ -219,6 +220,7 @@ def test_gate_hk_stock_watchlist_keeps_native_exchange_contract(monkeypatch):
         "spot",
         "00700",
         "HKD",
+        None,  # group_id
     )
 
 

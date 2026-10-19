@@ -17,10 +17,17 @@ from app.services.market.symbol_search import (
 )
 from app.services.market.watchlist import (
     add_watchlist_item,
+    add_watchlist_items,
+    create_watchlist_group,
+    delete_watchlist_group,
     get_user_watchlist_pairs,
     list_watchlist,
+    list_watchlist_groups,
+    move_watchlist_items,
     normalize_symbol,
     remove_watchlist_item,
+    set_watchlist_order,
+    update_watchlist_group,
     validate_watchlist_pair,
 )
 from app.services.market_context import default_crypto_exchange_id
@@ -252,6 +259,133 @@ def remove_watchlist():
         return jsonify({'code': 1, 'msg': 'success', 'data': None})
     except Exception as e:
         logger.error(f"remove_watchlist failed: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({'code': 0, 'msg': str(e), 'data': None}), 500
+
+@market_blp.route('/watchlist/addBatch', methods=['POST'])
+@login_required
+def add_watchlist_batch():
+    """Batch add watchlist items. Idempotent per item (existing rows update)."""
+    try:
+        data = request.get_json() or {}
+        items = data.get('items')
+        if not isinstance(items, list) or not items:
+            return jsonify({'code': 0, 'msg': 'items must be a non-empty list', 'data': None}), 400
+        if len(items) > 500:
+            return jsonify({'code': 0, 'msg': 'At most 500 items per batch', 'data': None}), 400
+        group_id = data.get('group_id') if data.get('group_id') is not None else data.get('groupId')
+        result = add_watchlist_items(g.user_id, items, group_id=group_id)
+        return jsonify({'code': 1, 'msg': 'success', 'data': result})
+    except Exception as e:
+        logger.error(f"add_watchlist_batch failed: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({'code': 0, 'msg': str(e), 'data': None}), 500
+
+@market_blp.route('/watchlist/groups', methods=['GET'])
+@login_required
+def get_watchlist_groups():
+    """List the current user's watchlist groups with item counts."""
+    try:
+        rows = list_watchlist_groups(g.user_id)
+        return jsonify({'code': 1, 'msg': 'success', 'data': rows})
+    except Exception as e:
+        logger.error(f"get_watchlist_groups failed: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({'code': 0, 'msg': str(e), 'data': []}), 500
+
+@market_blp.route('/watchlist/groups', methods=['POST'])
+@login_required
+def create_watchlist_group_route():
+    """Create a watchlist group. Re-creating an existing name returns it."""
+    try:
+        data = request.get_json() or {}
+        ok, message, group = create_watchlist_group(
+            g.user_id,
+            str(data.get('name') or ''),
+            sort_order=int(data.get('sortOrder') or data.get('sort_order') or 0),
+        )
+        if not ok:
+            return jsonify({'code': 0, 'msg': message, 'data': None}), 400
+        return jsonify({'code': 1, 'msg': message, 'data': group})
+    except (TypeError, ValueError):
+        return jsonify({'code': 0, 'msg': 'Invalid sortOrder', 'data': None}), 400
+    except Exception as e:
+        logger.error(f"create_watchlist_group failed: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({'code': 0, 'msg': str(e), 'data': None}), 500
+
+@market_blp.route('/watchlist/groups/<int:group_id>', methods=['PUT'])
+@login_required
+def update_watchlist_group_route(group_id: int):
+    """Rename and/or reorder a watchlist group."""
+    try:
+        data = request.get_json() or {}
+        sort_order_raw = data.get('sortOrder', data.get('sort_order'))
+        ok, message = update_watchlist_group(
+            g.user_id,
+            group_id,
+            name=str(data['name']) if data.get('name') is not None else None,
+            sort_order=int(sort_order_raw) if sort_order_raw is not None else None,
+        )
+        if not ok:
+            status = 404 if message == 'Group not found' else 400
+            return jsonify({'code': 0, 'msg': message, 'data': None}), status
+        return jsonify({'code': 1, 'msg': message, 'data': None})
+    except (TypeError, ValueError):
+        return jsonify({'code': 0, 'msg': 'Invalid sortOrder', 'data': None}), 400
+    except Exception as e:
+        logger.error(f"update_watchlist_group failed: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({'code': 0, 'msg': str(e), 'data': None}), 500
+
+@market_blp.route('/watchlist/groups/<int:group_id>', methods=['DELETE'])
+@login_required
+def delete_watchlist_group_route(group_id: int):
+    """Delete a group; its items fall back to ungrouped."""
+    try:
+        deleted = delete_watchlist_group(g.user_id, group_id)
+        if not deleted:
+            return jsonify({'code': 0, 'msg': 'Group not found', 'data': None}), 404
+        return jsonify({'code': 1, 'msg': 'success', 'data': None})
+    except Exception as e:
+        logger.error(f"delete_watchlist_group failed: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({'code': 0, 'msg': str(e), 'data': None}), 500
+
+@market_blp.route('/watchlist/move', methods=['POST'])
+@login_required
+def move_watchlist_items_route():
+    """Move items to a group; group_id null moves them to ungrouped."""
+    try:
+        data = request.get_json() or {}
+        item_ids = data.get('itemIds') or data.get('item_ids') or []
+        if not isinstance(item_ids, list):
+            return jsonify({'code': 0, 'msg': 'itemIds must be a list', 'data': None}), 400
+        group_id = data.get('group_id') if data.get('group_id') is not None else data.get('groupId')
+        result = move_watchlist_items(g.user_id, item_ids, group_id)
+        if result.get('error') and str(result['error']).startswith('Group '):
+            return jsonify({'code': 0, 'msg': result['error'], 'data': result}), 404
+        return jsonify({'code': 1, 'msg': 'success', 'data': result})
+    except Exception as e:
+        logger.error(f"move_watchlist_items failed: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({'code': 0, 'msg': str(e), 'data': None}), 500
+
+@market_blp.route('/watchlist/reorder', methods=['POST'])
+@login_required
+def reorder_watchlist_route():
+    """Persist manual item ordering (list position becomes sort_order)."""
+    try:
+        data = request.get_json() or {}
+        item_ids = data.get('itemIds') or data.get('item_ids') or []
+        if not isinstance(item_ids, list):
+            return jsonify({'code': 0, 'msg': 'itemIds must be a list', 'data': None}), 400
+        result = set_watchlist_order(g.user_id, item_ids)
+        if result.get('error'):
+            return jsonify({'code': 0, 'msg': result['error'], 'data': result}), 400
+        return jsonify({'code': 1, 'msg': 'success', 'data': result})
+    except Exception as e:
+        logger.error(f"reorder_watchlist failed: {str(e)}")
         logger.error(traceback.format_exc())
         return jsonify({'code': 0, 'msg': str(e), 'data': None}), 500
 
