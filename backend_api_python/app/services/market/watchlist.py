@@ -70,7 +70,7 @@ def list_watchlist(user_id: int) -> list:
              AND s.market_type = w.market_type
              AND s.instrument_id = w.instrument_id
             WHERE w.user_id = ?
-            ORDER BY COALESCE(g.sort_order, 0), w.group_id NULLS LAST, w.sort_order, w.id DESC
+            ORDER BY (w.group_id IS NULL), COALESCE(g.sort_order, 0), w.sort_order, w.id DESC
             """,
             (user_id,),
         )
