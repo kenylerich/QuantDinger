@@ -32,6 +32,16 @@ _MARKET_RULES = {
         "net inflow, net outflow, net buying or net selling. A/H premium is not applicable when the "
         "security profile says is_h_share=false. Explicitly disclose genuinely missing inputs."
     ),
+    "CNStock": (
+        "For mainland-China A-shares, distinguish exchange disclosures (SSE/SZSE announcements, "
+        "periodic reports) from aggregated provider estimates. Assess the latest quarterly report, "
+        "TTM and annual data from the supplied statements, and valuation against sector peers only "
+        "when supplied. Prices are quoted in CNY with mainland trading hours and price-limit rules; "
+        "do not import US/HK market-microstructure assumptions (options, short interest, insider "
+        "filings) unless that evidence is explicitly supplied. Northbound flow and analyst coverage "
+        "are frequently unavailable: state the gap instead of inferring. Explicitly disclose missing "
+        "inputs."
+    ),
     "Crypto": (
         "For crypto, distinguish spot from perpetual data and name the venue or aggregation scope. "
         "State funding units, open-interest currency/scope, basis tenor and liquidation window. "

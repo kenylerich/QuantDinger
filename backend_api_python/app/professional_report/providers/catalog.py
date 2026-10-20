@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from typing import Iterable, Mapping
 
 
-SUPPORTED_MARKETS = frozenset({"USStock", "HKStock", "Crypto"})
+SUPPORTED_MARKETS = frozenset({"USStock", "HKStock", "Crypto", "CNStock"})
 SUPPORTED_TIERS = frozenset({"community", "professional"})
 SUPPORTED_COST_LEVELS = frozenset({"free", "low", "medium", "high", "enterprise"})
 SUPPORTED_INTEGRATION_STATUSES = frozenset({"active", "planned"})
@@ -83,6 +83,23 @@ PROVIDER_CATALOG: tuple[ProviderSpec, ...] = (
     # Community sources are intentionally simple and free/low-cost.  They are
     # suitable defaults for research workflows, not implicit redistribution
     # licences for a customer-facing product.
+    ProviderSpec(
+        key="akshare",
+        name="AkShare (Eastmoney)",
+        tier="community",
+        markets=frozenset({"CNStock"}),
+        capabilities=frozenset({
+            "market_data", "fundamentals", "financial_statements",
+        }),
+        keyless=True,
+        cost_level="free",
+        license_warning=(
+            "Aggregates public mainland-China data endpoints (e.g. Eastmoney); "
+            "availability varies by network region and upstream changes."
+        ),
+        default_priority=10,
+        integration_status="active",
+    ),
     ProviderSpec(
         key="yahoo_finance",
         name="Yahoo Finance",

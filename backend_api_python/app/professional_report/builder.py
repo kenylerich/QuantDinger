@@ -206,6 +206,7 @@ def _macro_dimension_narrative(
     joined = "、".join(facts) if zh else ", ".join(facts)
     market_context = {
         "HKStock": ("全球及香港资金环境", "global and Hong Kong funding conditions"),
+        "CNStock": ("全球及中国内地风险资产环境", "global and mainland-China risk-asset conditions"),
         "USStock": ("全球及美国风险资产环境", "global and US risk-asset conditions"),
         "Crypto": ("全球流动性及加密风险偏好环境", "global liquidity and crypto risk-sentiment conditions"),
     }.get(market, ("全球风险资产环境", "global risk-asset conditions"))
@@ -557,7 +558,7 @@ def build_professional_report(
     market = str(collector_payload.get("market") or analysis_result.get("market") or "")
     prebuilt_market_features: dict[str, Any] | None = None
     hard_gate_reasons: list[str] = []
-    if market in {"USStock", "HKStock"}:
+    if market in {"USStock", "HKStock", "CNStock"}:
         prebuilt_market_features = build_equity_features(market, collector_payload, observations)
         if (prebuilt_market_features.get("identity") or {}).get("verified") is False:
             hard_gate_reasons.append("instrument_identity_unverified")
@@ -623,7 +624,7 @@ def build_professional_report(
         ),
     ]
 
-    if market in {"USStock", "HKStock"}:
+    if market in {"USStock", "HKStock", "CNStock"}:
         market_features = prebuilt_market_features or build_equity_features(
             market, collector_payload, observations
         )
@@ -722,7 +723,7 @@ def build_professional_report(
         "data_quality": quality,
         "market_features": market_features,
         "evidence_snapshot": snapshot,
-        "provider_options": _provider_payload(market) if market in {"USStock", "HKStock", "Crypto"} else {},
+        "provider_options": _provider_payload(market) if market in {"USStock", "HKStock", "Crypto", "CNStock"} else {},
         "warnings": warnings,
         "methodology": {
             "scoring_version": analysis_result.get("score_source") or "deterministic_objective_v2",

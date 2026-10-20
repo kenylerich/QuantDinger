@@ -12,6 +12,7 @@ from typing import Any, Iterable, Mapping
 _MARKET_DEFAULTS = {
     "USStock": {"currency": "USD", "timezone": "America/New_York", "asset_type": "equity"},
     "HKStock": {"currency": "HKD", "timezone": "Asia/Hong_Kong", "asset_type": "equity"},
+    "CNStock": {"currency": "CNY", "timezone": "Asia/Shanghai", "asset_type": "equity"},
     "Crypto": {"currency": None, "timezone": "UTC", "asset_type": "crypto"},
 }
 
@@ -123,6 +124,7 @@ def _instrument(payload: Mapping[str, Any]) -> dict[str, Any]:
         "venue": venue,
         "product_type": market_type if market == "Crypto" else "equity",
         "quote_currency": _quote_currency(market, symbol),
+        "currency": defaults.get("currency"),
         "timezone": defaults.get("timezone") or "UTC",
         "identity_verified": identity.get("verified"),
     }

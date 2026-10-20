@@ -135,6 +135,17 @@ def build_equity_features(
             key for key, value in market_specific.items()
             if applicable.get(key, True) and not value
         ]
+    elif market == "CNStock":
+        # A-share evidence today: fundamentals/statements via the legacy
+        # collector (AkShare) plus shared equity metrics. Analyst estimates,
+        # announcements and fund-flow datasets are not wired yet; keep them
+        # declared-but-missing so report completeness stays honest.
+        market_specific = {
+            "analyst_expectations": payload.get("analyst_expectations") or {},
+            "cn_announcements": payload.get("cn_announcements") or [],
+            "northbound_flow": payload.get("northbound_flow") or {},
+        }
+        missing = [key for key, value in market_specific.items() if not value]
     else:
         raise ValueError(f"unsupported equity market: {market}")
 

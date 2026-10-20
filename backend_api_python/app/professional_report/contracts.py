@@ -15,7 +15,7 @@ from typing import Any, Literal
 from pydantic import AliasChoices, AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
-Market = Literal["USStock", "HKStock", "Crypto"]
+Market = Literal["USStock", "HKStock", "Crypto", "CNStock"]
 Decision = Literal["BUY", "SELL", "HOLD"]
 MarketBias = Literal["BULLISH", "BEARISH", "NEUTRAL"]
 ConclusionStrength = Literal["none", "low", "medium", "high"]
@@ -44,6 +44,7 @@ class InstrumentIdentity(_ContractModel):
     product_type: str | None = None
     base_currency: str | None = None
     quote_currency: str = Field(min_length=1)
+    currency: str | None = None
     timezone: str = Field(min_length=1)
     identity_verified: bool | None = None
     identifiers: dict[str, str] = Field(default_factory=dict)
@@ -55,10 +56,11 @@ class InstrumentIdentity(_ContractModel):
             "us_equity": "USStock",
             "hk_equity": "HKStock",
             "crypto": "Crypto",
+            "cn_equity": "CNStock",
         }
         return aliases.get(str(value), str(value))
 
-    @field_validator("symbol", "canonical_symbol", "exchange", "base_currency", "quote_currency")
+    @field_validator("symbol", "canonical_symbol", "exchange", "base_currency", "quote_currency", "currency")
     @classmethod
     def normalise_market_codes(cls, value: str | None) -> str | None:
         return value.upper() if value else value
